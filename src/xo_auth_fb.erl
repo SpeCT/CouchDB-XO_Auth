@@ -14,9 +14,21 @@ handle_fb_req(#httpd{method='GET'}=Req) ->
         %% Did we get a 'code' or 'error' back from facebook?
         case couch_httpd:qs_value(Req, "code") of
             undefined ->
-                ?LOG_DEBUG("Facebook responded with something other than a code: ~p", [Req]),
-                couch_httpd:send_json(Req, 403, [], {[{error, <<"No code supplied">>}]});
-            Code -> 
+                case couch_httpd:qs_value(Req, "error") of
+                    "access_denied" ->
+                        ?LOG_DEBUG("User denied facebook app access: ~p", [Req]),
+                        RedirectUri = couch_config:get("fb", "redirect_deny", nil),
+                        case RedirectUri of
+                            nil ->
+                                couch_httpd:send_json(Req, 403, [], {[{error, <<"Facebook access denied">>}]});
+                            _ ->
+                                couch_httpd:send_json(Req, 302, [{"Location", RedirectUri}], nil)
+                        end;
+                    _ ->
+                        ?LOG_DEBUG("Facebook responded with something other than a code: ~p", [Req]),
+                        couch_httpd:send_json(Req, 403, [], {[{error, <<"No code supplied">>}]})
+                end;
+            Code ->
                 handle_fb_code(Req, Code)
         end
     catch

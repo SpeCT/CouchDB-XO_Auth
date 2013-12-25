@@ -93,6 +93,7 @@ To add Facebook authentication the following entries are required in the xo_auth
           redirect_uri=http://my_awesome_app.com/_fb
           client_secret=1234567890ABCDEF123456789
           client_app_uri=http://my_awesome_app.com/home?
+          redirect_deny=http://my_awesome_app.com/access_denied_by_user
 
 
 **\_fb**  
@@ -125,6 +126,9 @@ To add Facebook authentication the following entries are required in the xo_auth
   Once the Facebook and CouchDB login have completed this is the URL that the initial call
   will be redirected to. Any value passed to the initial _\_fb__ call param _clientapptoken_ will be
   appended to this URL.
+
+**redirect\_deny**
+  Once user rejected the Facebook App permissions this is the URL that the initial call will be redirected to.
 
 Twitter Configuration
 --------------------
