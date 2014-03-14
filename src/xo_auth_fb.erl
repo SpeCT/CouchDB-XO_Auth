@@ -75,9 +75,17 @@ create_or_update_user(Req, ClientID, ClientSecret, AccessToken, {ok, FacebookUse
     RedirectUri = couch_config:get("fb", "client_app_uri", nil),
     xo_auth:generate_cookied_response_json(Username, Req, RedirectUri).
 
+get_graph_uri() ->
+    [FacebookGraphUri] =
+        xo_auth:extract_config_values("fb", ["graph_uri"]),
+    case FacebookGraphUri of
+        undefined -> "https://graph.facebook.com";
+        GraphUri -> GraphUri
+    end.
+
 request_facebook_graphme_info(AccessToken) ->
     %% Construct the URL to access the graph API's /me page
-    Url="https://graph.facebook.com/me?fields=id,username,name&access_token="++AccessToken,
+    Url=get_graph_uri()++"/me?fields=id,username,name&access_token="++AccessToken,
     ?LOG_DEBUG("Url=~p",[Url]),
 
     %% Request the page
@@ -119,7 +127,7 @@ request_facebook_access_token(ClientAppToken, RedirectURI, ClientID, ClientSecre
         CAT ->
             couch_util:url_encode(RedirectURI++"?clientapptoken="++CAT)
     end,
-    Url="https://graph.facebook.com/oauth/access_token?client_id="++ClientID++"&client_secret="++ClientSecret++"&code="++FBCode++"&redirect_uri="++FullRedirectUrl,
+    Url=get_graph_uri()++"/oauth/access_token?client_id="++ClientID++"&client_secret="++ClientSecret++"&code="++FBCode++"&redirect_uri="++FullRedirectUrl,
     ?LOG_DEBUG("request_facebook_access_token: requesting using URL - ~p", [Url]),
 
     %% Request the page
@@ -147,11 +155,11 @@ process_facebook_access_token(Resp) ->
     end.
 
 request_access_token_extension(ClientID, ClientSecret, Token) ->
-    Url="https://graph.facebook.com/oauth/access_token?client_id=" ++ 
-        ClientID ++ 
-        "&client_secret=" ++ 
+    Url=get_graph_uri()++"/oauth/access_token?client_id=" ++
+        ClientID ++
+        "&client_secret=" ++
         ClientSecret ++
-        "&grant_type=fb_exchange_token&fb_exchange_token=" ++ 
+        "&grant_type=fb_exchange_token&fb_exchange_token=" ++
         Token,
     ?LOG_DEBUG("request_access_token_extension: requesting using URL - ~p", [Url]),
 
