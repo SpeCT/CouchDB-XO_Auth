@@ -28,6 +28,7 @@ handle_fb_req(#httpd{method='GET'}=Req) ->
                         ?LOG_DEBUG("Facebook responded with something other than a code: ~p", [Req]),
                         couch_httpd:send_json(Req, 403, [], {[{error, <<"No code supplied">>}]})
                 end;
+
             Code ->
                 handle_fb_code(Req, Code)
         end
@@ -89,7 +90,7 @@ create_or_update_user(Req, ClientID, ClientSecret, AccessToken, {ok, FacebookUse
 
 request_facebook_graphme_info(AccessToken) ->
     %% Construct the URL to access the graph API's /me page
-    Url="https://graph.facebook.com/me?fields=id,username,name,email&access_token="++AccessToken,
+    Url="https://graph.facebook.com/me?fields=id,email,username,name&access_token="++AccessToken,
     ?LOG_DEBUG("Url=~p",[Url]),
 
     %% Request the page
@@ -106,7 +107,7 @@ process_facebook_graphme_response(Resp) ->
             %% ID and the complete response.
             {FBInfo}=?JSON_DECODE(Body),
             ID = ?b2l(couch_util:get_value(<<"id">>, FBInfo)),
-            Username = case couch_util:get_value(<<"username">>, FBInfo) of
+            Username = case couch_util:get_value(<<"email">>, FBInfo) of
                            undefined ->
                                convert_name_to_username(?b2l(couch_util:get_value(<<"name">>, FBInfo)));
                            FBUsername ->
@@ -187,7 +188,7 @@ request_access_token_extension(ClientID, ClientSecret, Token) ->
             throw(could_not_extend_token)
     end.
 
--define(INVALID_CHARS, "&%+,./:;=?@ <>#%|\\[]{}~^`'").
+-define(INVALID_CHARS, "&%+,/:;=? <>#%|\\[]{}~^`'").
 
 convert_name_to_username(Name) ->
     Trimmed = lists:foldr(fun(Char, Acc) ->
