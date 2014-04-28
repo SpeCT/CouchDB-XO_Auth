@@ -48,7 +48,7 @@ check_user_database(ServiceName, ID) ->
     %% for the supplied service name
     AuthDb = open_auth_db(),
     {ok, Db} = ensure_xo_views_exist(AuthDb),
-    try 
+    try
 
         case query_xref_view(Db, [ServiceName, ID], [ServiceName, ID, <<"{}">>]) of
             [] ->
@@ -73,7 +73,7 @@ check_user_database(ServiceName, ID) ->
 %%
 determine_username(Req, Provider, ProviderID, ProviderUsername) ->
     case get_username_from_request(Req) of
-        undefined -> 
+        undefined ->
             %% No other account may be associated already
             case check_user_database(?l2b(Provider), ?l2b(ProviderID)) of
                 {Result} ->
@@ -83,11 +83,11 @@ determine_username(Req, Provider, ProviderID, ProviderUsername) ->
                     {ok, _DocID, NewUsername} = create_user_skeleton(ProviderUsername),
                     NewUsername
             end;
-        
+
         ExistingUsername ->
             ?LOG_DEBUG("Auth session found. Adding service to user: ~p", [ExistingUsername]),
 
-            %% If there is already a account registered with this username, 
+            %% If there is already a account registered with this username,
             %% it must be this user (otherwise multiple users could register with the
             %% same provider ID).
             case check_user_database(?l2b(Provider), ?l2b(ProviderID)) of
@@ -106,14 +106,15 @@ determine_username(Req, Provider, ProviderID, ProviderUsername) ->
 create_user_skeleton(UsernamePrototype) ->
 
     %% Create user auth doc with access token
-    TrimmedName = re:replace(UsernamePrototype, "[^A-Za-z0-9_-]", "", [global, {return, list}]),
+    TrimmedName = re:replace(UsernamePrototype, "[^A-Za-z0-9_-@\\.]", "", [global, {return, list}]),
     ?LOG_DEBUG("Trimmed name is ~p", [TrimmedName]),
     Db = open_auth_db(),
-    try 
+    try
 
         {A1,A2,A3} = now(),
         random:seed(A1, A2, A3),
-        Username = get_unused_name(Db, TrimmedName),
+        %% Username = get_unused_name(Db, TrimmedName),
+        Username = TrimmedName,
         ?LOG_DEBUG("Creating user skeleton for username ~p", [Username]),
 
         DocID=?l2b("org.couchdb.user:"++Username),
@@ -176,7 +177,7 @@ update_service_details(Username, ServiceName, ServiceUserID, AccessToken, Access
 
                 NewDocBody = ?replace(DocBody, ?l2b(ServiceName), ServiceDetails1),
                 ?LOG_DEBUG("Updated Body: ~p", [NewDocBody]),
-                
+
                 %% To prevent the validation functions for the db taking umbrage at our
                 %% behind the scenes twiddling, we blank them out.
                 %% NOTE: Potentially fragile. Possibly dangerous?
@@ -203,13 +204,13 @@ open_auth_db() ->
 get_unused_name(AuthDB, Name) ->
     FullID=?l2b("org.couchdb.user:"++Name),
     ?LOG_DEBUG("Checking for existence of ~p", [FullID]),
-    
+
     case (catch couch_db:open_doc_int(AuthDB, FullID, [])) of
         {ok, _} ->
             get_unused_name(AuthDB, lists:concat([Name, random:uniform(9)]));
-        _ -> 
+        _ ->
             Name
-    end.    
+    end.
 
 ensure_xo_views_exist(AuthDb) ->
     case couch_db:open_doc(AuthDb, ?XO_DDOC_ID, []) of
@@ -255,7 +256,7 @@ query_xref_view(Db, StartKey, EndKey) ->
 extract_config_values(Category, Keys) ->
     lists:map(fun(K) ->
                       case couch_config:get(Category, K, undefined) of
-                          undefined -> throw({missing_config_value, 
+                          undefined -> throw({missing_config_value,
                                               "Cannot find key '" ++ K ++ "' in [" ++ Category  ++ "] section of config"});
                           V -> V
                       end
@@ -263,7 +264,7 @@ extract_config_values(Category, Keys) ->
 
 get_username_from_request(#httpd{ user_ctx=UserCtx }) ->
     case UserCtx of
-        #user_ctx{name=Username} when Username =/= null -> 
+        #user_ctx{name=Username} when Username =/= null ->
             ?b2l(Username);
         _ ->
             undefined
