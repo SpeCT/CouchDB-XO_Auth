@@ -106,7 +106,7 @@ determine_username(Req, Provider, ProviderID, ProviderUsername) ->
 create_user_skeleton(UsernamePrototype) ->
 
     %% Create user auth doc with access token
-    TrimmedName = re:replace(UsernamePrototype, "[^A-Za-z0-9_-@.]", "", [global, {return, list}]),
+    TrimmedName = re:replace(UsernamePrototype, "[^A-Za-z0-9@._-]", "", [global, {return, list}]),
     ?LOG_DEBUG("Trimmed name is ~p", [TrimmedName]),
     Db = open_auth_db(),
     try
