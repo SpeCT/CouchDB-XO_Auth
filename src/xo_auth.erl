@@ -108,13 +108,15 @@ create_user_skeleton(UsernamePrototype) ->
     %% Create user auth doc with access token
     TrimmedName = re:replace(UsernamePrototype, "[^A-Za-z0-9@._-]", "", [global, {return, list}]),
     ?LOG_DEBUG("Trimmed name is ~p", [TrimmedName]),
+    HashedNameB = erlang:md5(TrimmedName),
+    HashedName = lists:flatten([io_lib:format("~2.16.0b", [B]) || <<B>> <= HashedNameB]),
     Db = open_auth_db(),
     try
 
         {A1,A2,A3} = now(),
         random:seed(A1, A2, A3),
         %% Username = get_unused_name(Db, TrimmedName),
-        Username = TrimmedName,
+        Username = HashedName,
         ?LOG_DEBUG("Creating user skeleton for username ~p", [Username]),
 
         DocID=?l2b("org.couchdb.user:"++Username),
